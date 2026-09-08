@@ -5,7 +5,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 import asyncio
 
-TOKEN = "твой_настоящий_токен"
+TOKEN = "TELEGRAM_BOT_TOKEN"
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
