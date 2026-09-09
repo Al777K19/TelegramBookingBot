@@ -29,6 +29,7 @@ def main_menu():
         keyboard=[
             [KeyboardButton(text="📅 Записаться")],
             [KeyboardButton(text="📋 Мои записи")],
+            [KeyboardButton(text="❌ Отменить запись")],
             [KeyboardButton(text="💰 Прайс-лист")],
             [KeyboardButton(text="⭐ Отзывы")],
             [KeyboardButton(text="📞 Контакты")],
@@ -109,6 +110,41 @@ async def my_bookings_button(message: Message):
         )
 
     await message.answer(text)
+
+@dp.message(F.text == "❌ Отменить запись")
+async def cancel_booking(message: Message):
+
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT id
+    FROM applications
+    WHERE telegram_id = ?
+    ORDER BY id DESC
+    LIMIT 1
+    """, (message.from_user.id,))
+
+    row = cursor.fetchone()
+
+    if not row:
+        conn.close()
+        await message.answer("У вас нет активных записей.")
+        return
+
+    booking_id = row[0]
+
+    cursor.execute(
+        "DELETE FROM applications WHERE id = ?",
+        (booking_id,)
+    )
+
+    conn.commit()
+    conn.close()
+
+    await message.answer(
+        f"✅ Запись №{booking_id} отменена."
+    )
 
 @dp.message(F.text == "💰 Прайс-лист")
 async def price(message: Message):
