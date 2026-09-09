@@ -23,6 +23,7 @@ class Booking(StatesGroup):
     waiting_for_name = State()
     waiting_for_phone = State()
     waiting_for_broadcast = State()
+    waiting_for_broadcast_confirm = State()
 
 
 
@@ -586,7 +587,27 @@ async def broadcast_send(message: Message, state: FSMContext):
     if message.from_user.id != ADMIN_ID:
         return
 
-    text_to_send = message.text
+    await state.update_data(broadcast_text=message.text)
+    await state.set_state(Booking.waiting_for_broadcast_confirm)
+
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="✅ Отправить")],
+            [KeyboardButton(text="❌ Отмена")]
+        ],
+        resize_keyboard=True
+    )
+
+    await message.answer(
+        f"📢 Текст рассылки:\n\n{message.text}\n\nОтправить рассылку?",
+        reply_markup=keyboard
+    )
+
+@dp.message(Booking.waiting_for_broadcast_confirm, F.text == "✅ Отправить")
+async def confirm_broadcast(message: Message, state: FSMContext):
+
+    data = await state.get_data()
+    text_to_send = data["broadcast_text"]
 
     conn = sqlite3.connect("database.db")
     cursor = conn.cursor()
@@ -612,10 +633,21 @@ async def broadcast_send(message: Message, state: FSMContext):
             pass
 
     await message.answer(
-        f"✅ Рассылка завершена.\nОтправлено: {sent}"
+        f"✅ Рассылка завершена.\nОтправлено: {sent}",
+        reply_markup=admin_menu()
     )
 
     await state.clear()
+
+@dp.message(Booking.waiting_for_broadcast_confirm, F.text == "❌ Отмена")
+async def cancel_broadcast(message: Message, state: FSMContext):
+
+    await state.clear()
+
+    await message.answer(
+        "❌ Рассылка отменена.",
+        reply_markup=admin_menu()
+    )
 
 async def main():
     await dp.start_polling(bot)
