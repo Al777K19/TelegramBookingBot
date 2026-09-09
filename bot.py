@@ -7,6 +7,7 @@ import asyncio
 import os
 import re
 import sqlite3
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ADMIN_ID = 6840202483
@@ -193,7 +194,8 @@ async def get_time(message: Message, state: FSMContext):
     await state.set_state(Booking.waiting_for_name)
 
     await message.answer(
-        "Введите ваше имя:"
+        "Введите ваше имя:",
+        reply_markup=ReplyKeyboardRemove()
     )
 
 
