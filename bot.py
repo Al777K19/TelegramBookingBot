@@ -8,7 +8,7 @@ import os
 import re
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-ADMIN_ID = 6440202483
+ADMIN_ID = 6840202483
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
