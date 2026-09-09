@@ -140,6 +140,7 @@ async def service_selected(message: Message, state: FSMContext):
         "📆 Выберите дату:",
         reply_markup=keyboard
     )
+
 @dp.message(Booking.waiting_for_date)
 async def get_date(message: Message, state: FSMContext):
     await state.update_data(date=message.text)
