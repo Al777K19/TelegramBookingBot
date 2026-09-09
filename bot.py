@@ -210,6 +210,40 @@ async def get_phone(message: Message, state: FSMContext):
 
     await state.clear()
 
+@dp.message(Command("applications"))
+async def applications(message: Message):
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Доступ запрещён")
+        return
+
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT id, service, name, phone
+    FROM applications
+    ORDER BY id DESC
+    LIMIT 10
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    if not rows:
+        await message.answer("Заявок пока нет.")
+        return
+
+    text = "📋 Последние заявки:\n\n"
+
+    for row in rows:
+        text += (
+            f"🆔 #{row[0]}\n"
+            f"📅 {row[1]}\n"
+            f"👤 {row[2]}\n"
+            f"📞 {row[3]}\n\n"
+        )
+
+    await message.answer(text)
 
 async def main():
     await dp.start_polling(bot)
