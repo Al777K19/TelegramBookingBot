@@ -24,6 +24,7 @@ class Booking(StatesGroup):
     waiting_for_phone = State()
     waiting_for_broadcast = State()
     waiting_for_broadcast_confirm = State()
+    waiting_for_review = State()
 
 
 
@@ -36,6 +37,7 @@ def main_menu():
             [KeyboardButton(text="❌ Отменить запись")],
             [KeyboardButton(text="💰 Прайс-лист")],
             [KeyboardButton(text="⭐ Отзывы")],
+            [KeyboardButton(text="⭐ Оставить отзыв")],
             [KeyboardButton(text="📞 Контакты")],
             [KeyboardButton(text="ℹ️ О нас")]
         ],
@@ -180,12 +182,35 @@ async def price(message: Message):
 
 @dp.message(F.text == "⭐ Отзывы")
 async def reviews(message: Message):
-    await message.answer(
-        "⭐ Отзывы клиентов\n\n"
-        "★★★★★ Отличный сервис!\n\n"
-        "★★★★★ Очень доволен результатом.\n\n"
-        "★★★★★ Обязательно обращусь снова."
-    )
+
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT name, review
+    FROM reviews
+    ORDER BY id DESC
+    LIMIT 10
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    if not rows:
+        await message.answer(
+            "⭐ Отзывов пока нет."
+        )
+        return
+
+    text = "⭐ Последние отзывы:\n\n"
+
+    for name, review in rows:
+        text += (
+            f"👤 {name}\n"
+            f"💬 {review}\n\n"
+        )
+
+    await message.answer(text)
 
 
 @dp.message(F.text == "📞 Контакты")
@@ -648,6 +673,40 @@ async def cancel_broadcast(message: Message, state: FSMContext):
         "❌ Рассылка отменена.",
         reply_markup=admin_menu()
     )
+
+@dp.message(F.text == "⭐ Оставить отзыв")
+async def review_start(message: Message, state: FSMContext):
+
+    await state.set_state(Booking.waiting_for_review)
+
+    await message.answer(
+        "⭐ Напишите ваш отзыв:"
+    )
+
+
+@dp.message(Booking.waiting_for_review)
+async def save_review(message: Message, state: FSMContext):
+
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    INSERT INTO reviews (name, review)
+    VALUES (?, ?)
+    """, (
+        message.from_user.full_name,
+        message.text
+    ))
+
+    conn.commit()
+    conn.close()
+
+    await message.answer(
+        "✅ Спасибо за отзыв!",
+        reply_markup=main_menu()
+    )
+
+    await state.clear()
 
 async def main():
     await dp.start_polling(bot)
