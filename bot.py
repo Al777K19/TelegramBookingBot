@@ -479,6 +479,60 @@ async def schedule(message: Message):
 
     await message.answer(text)
 
+@dp.message(F.text == "📅 Расписание")
+async def schedule(message: Message):
+
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT service, booking_date, booking_time, name
+    FROM applications
+    ORDER BY id DESC
+    LIMIT 20
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    if not rows:
+        await message.answer("Записей пока нет.")
+        return
+
+    text = "📅 Расписание\n\n"
+
+    for row in rows:
+        text += (
+            f"✂️ {row[0]}\n"
+            f"📆 {row[1]}\n"
+            f"🕒 {row[2]}\n"
+            f"👤 {row[3]}\n\n"
+        )
+
+    await message.answer(text)
+
+@dp.message(F.text == "📊 Статистика")
+async def stats(message: Message):
+
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM applications")
+    total = cursor.fetchone()[0]
+
+    conn.close()
+
+    await message.answer(
+        f"📊 Статистика\n\n"
+        f"Всего заявок: {total}"
+    )
+
 @dp.message(F.text == "👥 Клиенты")
 async def clients(message: Message):
 
@@ -510,6 +564,16 @@ async def clients(message: Message):
         )
 
     await message.answer(text)
+
+@dp.message(F.text == "📢 Рассылка")
+async def broadcast(message: Message):
+
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    await message.answer(
+        "Функция рассылки будет добавлена позже."
+    )
 
 async def main():
     await dp.start_polling(bot)
