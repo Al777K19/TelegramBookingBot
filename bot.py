@@ -50,6 +50,7 @@ def admin_menu():
             [KeyboardButton(text="📅 Расписание")],
             [KeyboardButton(text="📊 Статистика")],
             [KeyboardButton(text="👥 Клиенты")],
+            [KeyboardButton(text="💰 Выручка")],
             [KeyboardButton(text="📢 Рассылка")]
         ],
         resize_keyboard=True
@@ -591,6 +592,46 @@ async def clients(message: Message):
             f"👤 {name}\n"
             f"📞 {phone}\n\n"
         )
+
+    await message.answer(text)
+
+@dp.message(F.text == "💰 Выручка")
+async def revenue(message: Message):
+
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT service, COUNT(*)
+    FROM applications
+    GROUP BY service
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    prices = {
+        "✂️ Стрижка": 20,
+        "💅 Маникюр": 25,
+        "🎨 Окрашивание": 50
+    }
+
+    total = 0
+    text = "💰 Выручка\n\n"
+
+    for service, count in rows:
+        revenue = count * prices.get(service, 0)
+        total += revenue
+
+        text += (
+            f"{service}\n"
+            f"{count} × {prices.get(service, 0)}€ = {revenue}€\n\n"
+        )
+
+    text += f"💵 Итого: {total}€"
 
     await message.answer(text)
 
