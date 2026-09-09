@@ -5,11 +5,15 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 import asyncio
 import os
+import re
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+ADMIN_ID = 6440202483
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
+
+application_counter = 1
 
 
 class Booking(StatesGroup):
@@ -17,20 +21,77 @@ class Booking(StatesGroup):
     waiting_for_phone = State()
 
 
-@dp.message(Command("start"))
-async def start(message: Message):
-    keyboard = ReplyKeyboardMarkup(
+def main_menu():
+    return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="📅 Записаться")],
+            [KeyboardButton(text="💰 Прайс-лист")],
+            [KeyboardButton(text="⭐ Отзывы")],
             [KeyboardButton(text="📞 Контакты")],
             [KeyboardButton(text="ℹ️ О нас")]
         ],
         resize_keyboard=True
     )
 
+
+def services_menu():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="✂️ Стрижка")],
+            [KeyboardButton(text="💅 Маникюр")],
+            [KeyboardButton(text="🎨 Окрашивание")],
+            [KeyboardButton(text="⬅️ Назад")],
+            [KeyboardButton(text="🏠 Главное меню")]
+        ],
+        resize_keyboard=True
+    )
+
+
+@dp.message(Command("start"))
+async def start(message: Message):
     await message.answer(
-        "Добро пожаловать!",
-        reply_markup=keyboard
+        "👋 Добро пожаловать!\n\n"
+        "Мы поможем вам быстро записаться на услугу.\n"
+        "Выберите нужный пункт меню ниже.",
+        reply_markup=main_menu()
+    )
+
+
+@dp.message(F.text == "🏠 Главное меню")
+async def back_to_main(message: Message, state: FSMContext):
+    await state.clear()
+
+    await message.answer(
+        "🏠 Главное меню",
+        reply_markup=main_menu()
+    )
+
+
+@dp.message(F.text == "⬅️ Назад")
+async def back(message: Message):
+    await message.answer(
+        "Выберите услугу:",
+        reply_markup=services_menu()
+    )
+
+
+@dp.message(F.text == "💰 Прайс-лист")
+async def price(message: Message):
+    await message.answer(
+        "💰 Прайс-лист\n\n"
+        "✂️ Стрижка — 20 €\n"
+        "💅 Маникюр — 25 €\n"
+        "🎨 Окрашивание — 50 €"
+    )
+
+
+@dp.message(F.text == "⭐ Отзывы")
+async def reviews(message: Message):
+    await message.answer(
+        "⭐ Отзывы клиентов\n\n"
+        "★★★★★ Отличный сервис!\n\n"
+        "★★★★★ Очень доволен результатом.\n\n"
+        "★★★★★ Обязательно обращусь снова."
     )
 
 
@@ -45,6 +106,7 @@ async def contacts(message: Message):
 @dp.message(F.text == "ℹ️ О нас")
 async def about(message: Message):
     await message.answer(
+        "ℹ️ О нас\n\n"
         "Мы оказываем профессиональные услуги.\n"
         "Работаем ежедневно с 09:00 до 20:00."
     )
@@ -52,18 +114,9 @@ async def about(message: Message):
 
 @dp.message(F.text == "📅 Записаться")
 async def booking(message: Message):
-    keyboard = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="✂️ Стрижка")],
-            [KeyboardButton(text="💅 Маникюр")],
-            [KeyboardButton(text="🎨 Окрашивание")]
-        ],
-        resize_keyboard=True
-    )
-
     await message.answer(
         "Выберите услугу:",
-        reply_markup=keyboard
+        reply_markup=services_menu()
     )
 
 
@@ -72,7 +125,9 @@ async def service_selected(message: Message, state: FSMContext):
     await state.update_data(service=message.text)
     await state.set_state(Booking.waiting_for_name)
 
-    await message.answer("Введите ваше имя:")
+    await message.answer(
+        "Введите ваше имя:"
+    )
 
 
 @dp.message(Booking.waiting_for_name)
@@ -80,21 +135,61 @@ async def get_name(message: Message, state: FSMContext):
     await state.update_data(name=message.text)
     await state.set_state(Booking.waiting_for_phone)
 
-    await message.answer("Введите номер телефона:")
+    await message.answer(
+        "Введите номер телефона:"
+    )
 
 
 @dp.message(Booking.waiting_for_phone)
 async def get_phone(message: Message, state: FSMContext):
-    await state.update_data(phone=message.text)
+    global application_counter
+
+    phone = message.text.strip()
+
+    if not re.fullmatch(r"[\d+\-\s()]{6,20}", phone):
+        await message.answer(
+            "❌ Некорректный номер телефона.\n"
+            "Введите номер ещё раз."
+        )
+        return
+
+    await state.update_data(phone=phone)
 
     data = await state.get_data()
 
-    await message.answer(
-        f"✅ Запись оформлена!\n\n"
-        f"Услуга: {data['service']}\n"
-        f"Имя: {data['name']}\n"
-        f"Телефон: {data['phone']}"
+    application_number = application_counter
+    application_counter += 1
+
+    username = (
+        f"@{message.from_user.username}"
+        if message.from_user.username
+        else "не указан"
     )
+
+    await message.answer(
+        f"✅ Заявка успешно оформлена!\n\n"
+        f"🆔 Номер заявки: #{application_number:04d}\n"
+        f"📅 Услуга: {data['service']}\n"
+        f"👤 Имя: {data['name']}\n"
+        f"📞 Телефон: {data['phone']}\n\n"
+        f"Мы свяжемся с вами в ближайшее время.\n"
+        f"Спасибо за обращение!",
+        reply_markup=main_menu()
+    )
+
+    try:
+        await bot.send_message(
+            ADMIN_ID,
+            f"🔔 Новая заявка!\n\n"
+            f"🆔 #{application_number:04d}\n"
+            f"📅 Услуга: {data['service']}\n"
+            f"👤 Имя: {data['name']}\n"
+            f"📞 Телефон: {data['phone']}\n\n"
+            f"👤 Telegram: {username}\n"
+            f"ID: {message.from_user.id}"
+        )
+    except Exception as e:
+        print(f'Ошибка отправки админу: {e}')
 
     await state.clear()
 
