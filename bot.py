@@ -17,6 +17,8 @@ dp = Dispatcher()
 
 
 class Booking(StatesGroup):
+    waiting_for_date = State()
+    waiting_for_time = State()
     waiting_for_name = State()
     waiting_for_phone = State()
 
@@ -123,11 +125,49 @@ async def booking(message: Message):
 @dp.message(F.text.in_(["✂️ Стрижка", "💅 Маникюр", "🎨 Окрашивание"]))
 async def service_selected(message: Message, state: FSMContext):
     await state.update_data(service=message.text)
-    await state.set_state(Booking.waiting_for_name)
+    await state.set_state(Booking.waiting_for_date)
+
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="Сегодня")],
+            [KeyboardButton(text="Завтра")],
+            [KeyboardButton(text="Послезавтра")]
+        ],
+        resize_keyboard=True
+    )
 
     await message.answer(
-        "Введите ваше имя:"
+        "📆 Выберите дату:",
+        reply_markup=keyboard
     )
+@dp.message(Booking.waiting_for_date)
+async def get_date(message: Message, state: FSMContext):
+    await state.update_data(date=message.text)
+    await state.set_state(Booking.waiting_for_time)
+
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="09:00")],
+            [KeyboardButton(text="11:00")],
+            [KeyboardButton(text="13:00")],
+            [KeyboardButton(text="15:00")],
+            [KeyboardButton(text="17:00")]
+        ],
+        resize_keyboard=True
+    )
+
+    await message.answer(
+        "🕒 Выберите время:",
+        reply_markup=keyboard
+    )
+
+
+@dp.message(Booking.waiting_for_time)
+async def get_time(message: Message, state: FSMContext):
+    await state.update_data(time=message.text)
+    await state.set_state(Booking.waiting_for_name)
+
+    await message.answer("Введите ваше имя:")
 
 
 @dp.message(Booking.waiting_for_name)
@@ -187,6 +227,8 @@ async def get_phone(message: Message, state: FSMContext):
         f"✅ Заявка успешно оформлена!\n\n"
         f"🆔 Номер заявки: #{application_number:04d}\n"
         f"📅 Услуга: {data['service']}\n"
+        f"📆 Дата: {data['date']}\n"
+        f"🕒 Время: {data['time']}\n"
         f"👤 Имя: {data['name']}\n"
         f"📞 Телефон: {data['phone']}\n\n"
         f"Мы свяжемся с вами в ближайшее время.\n"
@@ -200,8 +242,10 @@ async def get_phone(message: Message, state: FSMContext):
             f"🔔 Новая заявка!\n\n"
             f"🆔 #{application_number:04d}\n"
             f"📅 Услуга: {data['service']}\n"
+            f"📆 Дата: {data['date']}\n"
+            f"🕒 Время: {data['time']}\n"
             f"👤 Имя: {data['name']}\n"
-            f"📞 Телефон: {data['phone']}\n\n"
+            f"📞 Телефон: {data['phone']}\n\n" 
             f"👤 Telegram: {username}\n"
             f"ID: {message.from_user.id}"
         )
