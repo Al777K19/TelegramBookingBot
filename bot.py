@@ -201,10 +201,12 @@ async def get_phone(message: Message, state: FSMContext):
 
     cursor.execute("""
     INSERT INTO applications
-    (service, name, phone, telegram_id, username)
-    VALUES (?, ?, ?, ?, ?)
+    (service, booking_date, booking_time, name, phone, telegram_id, username)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
     """, (
         data["service"],
+        data["date"],
+        data["time"],
         data["name"],
         phone,
         message.from_user.id,
