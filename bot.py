@@ -335,6 +335,33 @@ async def count_applications(message: Message):
 
     await message.answer(f"Всего заявок в базе: {count}")
 
+@dp.message(Command("stats"))
+async def stats(message: Message):
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM applications")
+    total = cursor.fetchone()[0]
+
+    cursor.execute("""
+    SELECT service, COUNT(*)
+    FROM applications
+    GROUP BY service
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    text = f"📊 Статистика\n\nВсего заявок: {total}\n\n"
+
+    for service, count in rows:
+        text += f"{service}: {count}\n"
+
+    await message.answer(text)
+
 async def main():
     await dp.start_polling(bot)
 
