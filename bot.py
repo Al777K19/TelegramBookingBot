@@ -245,6 +245,21 @@ async def applications(message: Message):
 
     await message.answer(text)
 
+@dp.message(Command("count"))
+async def count_applications(message: Message):
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM applications")
+    count = cursor.fetchone()[0]
+
+    conn.close()
+
+    await message.answer(f"Всего заявок в базе: {count}")
+
 async def main():
     await dp.start_polling(bot)
 
