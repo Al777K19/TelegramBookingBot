@@ -479,6 +479,37 @@ async def schedule(message: Message):
 
     await message.answer(text)
 
+@dp.message(F.text == "👥 Клиенты")
+async def clients(message: Message):
+
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT DISTINCT name, phone
+    FROM applications
+    ORDER BY name
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    if not rows:
+        await message.answer("Клиентов пока нет.")
+        return
+
+    text = "👥 Клиенты\n\n"
+
+    for name, phone in rows:
+        text += (
+            f"👤 {name}\n"
+            f"📞 {phone}\n\n"
+        )
+
+    await message.answer(text)
 
 async def main():
     await dp.start_polling(bot)
