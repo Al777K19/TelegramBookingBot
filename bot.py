@@ -371,7 +371,7 @@ async def schedule(message: Message):
     cursor = conn.cursor()
 
     cursor.execute("""
-    SELECT booking_date, booking_time, name
+    SELECT booking_date, booking_time, service, name
     FROM applications
     ORDER BY booking_date, booking_time
     """)
@@ -385,8 +385,11 @@ async def schedule(message: Message):
 
     text = "📅 Расписание\n\n"
 
-    for date, time, name in rows:
-        text += f"📆 {date}\n🕒 {time} — {name}\n\n"
+    for date, time, service, name in rows:
+        text += (
+            f"📆 {date}\n"
+            f"🕒 {time} — {service} — {name}\n\n"
+        )
 
     await message.answer(text)
 
