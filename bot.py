@@ -28,6 +28,7 @@ def main_menu():
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="📅 Записаться")],
+            [KeyboardButton(text="📋 Мои записи")]
             [KeyboardButton(text="💰 Прайс-лист")],
             [KeyboardButton(text="⭐ Отзывы")],
             [KeyboardButton(text="📞 Контакты")],
@@ -77,6 +78,37 @@ async def back(message: Message):
         reply_markup=services_menu()
     )
 
+@dp.message(F.text == "📋 Мои записи")
+async def my_bookings_button(message: Message):
+
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT id, service, booking_date, booking_time
+    FROM applications
+    WHERE telegram_id = ?
+    ORDER BY id DESC
+    """, (message.from_user.id,))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    if not rows:
+        await message.answer("У вас пока нет записей.")
+        return
+
+    text = "📋 Ваши записи\n\n"
+
+    for row in rows:
+        text += (
+            f"🆔 #{row[0]}\n"
+            f"✂️ Услуга: {row[1]}\n"
+            f"📆 Дата: {row[2]}\n"
+            f"🕒 Время: {row[3]}\n\n"
+        )
+
+    await message.answer(text)
 
 @dp.message(F.text == "💰 Прайс-лист")
 async def price(message: Message):
