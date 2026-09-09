@@ -38,6 +38,17 @@ def main_menu():
         resize_keyboard=True
     )
 
+def admin_menu():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="📅 Расписание")],
+            [KeyboardButton(text="📊 Статистика")],
+            [KeyboardButton(text="👥 Клиенты")],
+            [KeyboardButton(text="📢 Рассылка")]
+        ],
+        resize_keyboard=True
+    )
+
 
 def services_menu():
     return ReplyKeyboardMarkup(
@@ -54,11 +65,18 @@ def services_menu():
 
 @dp.message(Command("start"))
 async def start(message: Message):
+
+    menu = (
+        admin_menu()
+        if message.from_user.id == ADMIN_ID
+        else main_menu()
+    )
+
     await message.answer(
         "👋 Добро пожаловать!\n\n"
         "Мы поможем вам быстро записаться на услугу.\n"
         "Выберите нужный пункт меню ниже.",
-        reply_markup=main_menu()
+        reply_markup=menu
     )
 
 
