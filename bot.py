@@ -425,37 +425,6 @@ async def schedule(message: Message):
 
     await message.answer(text)
 
-@dp.message(Command("mybookings"))
-async def my_bookings(message: Message):
-
-    conn = sqlite3.connect("database.db")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-    SELECT id, service, booking_date, booking_time
-    FROM applications
-    WHERE telegram_id = ?
-    ORDER BY id DESC
-    """, (message.from_user.id,))
-
-    rows = cursor.fetchall()
-    conn.close()
-
-    if not rows:
-        await message.answer("У вас пока нет записей.")
-        return
-
-    text = "📋 Ваши записи\n\n"
-
-    for row in rows:
-        text += (
-            f"🆔 #{row[0]}\n"
-            f"📅 {row[1]}\n"
-            f"📆 {row[2]}\n"
-            f"🕒 {row[3]}\n\n"
-        )
-
-    await message.answer(text)
 
 async def main():
     await dp.start_polling(bot)
