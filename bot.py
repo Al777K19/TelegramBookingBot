@@ -22,6 +22,9 @@ class Booking(StatesGroup):
     waiting_for_time = State()
     waiting_for_name = State()
     waiting_for_phone = State()
+    waiting_for_broadcast = State()
+
+
 
 
 def main_menu():
@@ -566,14 +569,53 @@ async def clients(message: Message):
     await message.answer(text)
 
 @dp.message(F.text == "📢 Рассылка")
-async def broadcast(message: Message):
+async def broadcast_start(message: Message, state: FSMContext):
 
     if message.from_user.id != ADMIN_ID:
         return
 
+    await state.set_state(Booking.waiting_for_broadcast)
+
     await message.answer(
-        "Функция рассылки будет добавлена позже."
+        "📢 Введите текст для рассылки:"
     )
+
+@dp.message(Booking.waiting_for_broadcast)
+async def broadcast_send(message: Message, state: FSMContext):
+
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    text_to_send = message.text
+
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT DISTINCT telegram_id
+    FROM applications
+    """)
+
+    users = cursor.fetchall()
+    conn.close()
+
+    sent = 0
+
+    for user in users:
+        try:
+            await bot.send_message(
+                user[0],
+                f"📢 Сообщение от администрации\n\n{text_to_send}"
+            )
+            sent += 1
+        except Exception:
+            pass
+
+    await message.answer(
+        f"✅ Рассылка завершена.\nОтправлено: {sent}"
+    )
+
+    await state.clear()
 
 async def main():
     await dp.start_polling(bot)
