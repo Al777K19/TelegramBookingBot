@@ -362,6 +362,34 @@ async def stats(message: Message):
 
     await message.answer(text)
 
+@dp.message(Command("schedule"))
+async def schedule(message: Message):
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT booking_date, booking_time, name
+    FROM applications
+    ORDER BY booking_date, booking_time
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    if not rows:
+        await message.answer("Записей пока нет.")
+        return
+
+    text = "📅 Расписание\n\n"
+
+    for date, time, name in rows:
+        text += f"📆 {date}\n🕒 {time} — {name}\n\n"
+
+    await message.answer(text)
+
 async def main():
     await dp.start_polling(bot)
 
