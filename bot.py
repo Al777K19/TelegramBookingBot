@@ -6,6 +6,7 @@ from aiogram.fsm.context import FSMContext
 import asyncio
 import os
 import re
+import sqlite3
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ADMIN_ID = 6840202483
@@ -13,7 +14,6 @@ ADMIN_ID = 6840202483
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-application_counter = 1
 
 
 class Booking(StatesGroup):
@@ -142,7 +142,6 @@ async def get_name(message: Message, state: FSMContext):
 
 @dp.message(Booking.waiting_for_phone)
 async def get_phone(message: Message, state: FSMContext):
-    global application_counter
 
     phone = message.text.strip()
 
@@ -156,9 +155,27 @@ async def get_phone(message: Message, state: FSMContext):
     await state.update_data(phone=phone)
 
     data = await state.get_data()
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
 
-    application_number = application_counter
-    application_counter += 1
+    cursor.execute("""
+    INSERT INTO applications
+    (service, name, phone, telegram_id, username)
+    VALUES (?, ?, ?, ?, ?)
+    """, (
+        data["service"],
+        data["name"],
+        phone,
+        message.from_user.id,
+        message.from_user.username
+    ))
+
+    conn.commit()
+
+    application_number = cursor.lastrowid
+
+    conn.close()
+
 
     username = (
         f"@{message.from_user.username}"
