@@ -162,43 +162,39 @@ async def get_date(message: Message, state: FSMContext):
         reply_markup=keyboard
     )
 
-    @dp.message(Booking.waiting_for_time)
-    async def get_time(message: Message, state: FSMContext):
-        data = await state.get_data()
+@dp.message(Booking.waiting_for_time)
+async def get_time(message: Message, state: FSMContext):
+    data = await state.get_data()
 
-        conn = sqlite3.connect("database.db")
-        cursor = conn.cursor()
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
 
-        cursor.execute("""
-        SELECT COUNT(*)
-        FROM applications
-        WHERE booking_date = ?
-        AND booking_time = ?
-        """, (
-            data["date"],
-            message.text
-        ))
+    cursor.execute("""
+    SELECT COUNT(*)
+    FROM applications
+    WHERE booking_date = ?
+    AND booking_time = ?
+    """, (
+        data["date"],
+        message.text
+    ))
 
-        count = cursor.fetchone()[0]
-        conn.close()
+    count = cursor.fetchone()[0]
+    conn.close()
 
-        if count > 0:
-            await message.answer(
-                "❌ Это время уже занято.\n"
-                "Выберите другое время."
-            )
-            return
-
-        await state.update_data(time=message.text)
-        await state.set_state(Booking.waiting_for_name)
-
+    if count > 0:
         await message.answer(
-            "Введите ваше имя:"
+            "❌ Это время уже занято.\n"
+            "Выберите другое время."
         )
+        return
+
     await state.update_data(time=message.text)
     await state.set_state(Booking.waiting_for_name)
 
-    await message.answer("Введите ваше имя:")
+    await message.answer(
+        "Введите ваше имя:"
+    )
 
 
 @dp.message(Booking.waiting_for_name)
