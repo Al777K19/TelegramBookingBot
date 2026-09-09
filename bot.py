@@ -28,7 +28,7 @@ def main_menu():
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="📅 Записаться")],
-            [KeyboardButton(text="📋 Мои записи")]
+            [KeyboardButton(text="📋 Мои записи")],
             [KeyboardButton(text="💰 Прайс-лист")],
             [KeyboardButton(text="⭐ Отзывы")],
             [KeyboardButton(text="📞 Контакты")],
