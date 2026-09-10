@@ -387,6 +387,28 @@ async def get_phone(message: Message, state: FSMContext):
     conn = sqlite3.connect("database.db")
     cursor = conn.cursor()
 
+    # Проверка: занято ли время
+
+    cursor.execute("""
+    SELECT COUNT(*)
+    FROM applications
+    WHERE booking_date = ?
+    AND booking_time = ?
+    """, (
+        data["date"],
+        data["time"]
+    ))
+
+    if cursor.fetchone()[0] > 0:
+        conn.close()
+
+        await message.answer(
+            "❌ Это время уже занято.\nВыберите другую дату или время."
+        )
+
+        await state.clear()
+        return
+
     cursor.execute("""
     INSERT INTO applications
     (service, booking_date, booking_time, name, phone, telegram_id, username)
