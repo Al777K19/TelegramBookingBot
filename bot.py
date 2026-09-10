@@ -350,6 +350,19 @@ async def service_selected(message: Message, state: FSMContext):
 
 @dp.message(Booking.waiting_for_date)
 async def get_date(message: Message, state: FSMContext):
+
+    allowed_dates = [
+        "Сегодня",
+        "Завтра",
+        "Послезавтра"
+    ]
+
+    if message.text not in allowed_dates:
+        await message.answer(
+            "⚠️ Пожалуйста, выберите дату кнопкой."
+        )
+        return
+
     await state.update_data(date=message.text)
 
     conn = sqlite3.connect("database.db")
@@ -392,8 +405,24 @@ async def get_date(message: Message, state: FSMContext):
         reply_markup=keyboard
     )
 
+
 @dp.message(Booking.waiting_for_time)
 async def get_time(message: Message, state: FSMContext):
+
+    allowed_times = [
+        "09:00",
+        "11:00",
+        "13:00",
+        "15:00",
+        "17:00"
+    ]
+
+    if message.text not in allowed_times:
+        await message.answer(
+            "⚠️ Пожалуйста, выберите время кнопкой."
+        )
+        return
+
     data = await state.get_data()
 
     conn = sqlite3.connect("database.db")
