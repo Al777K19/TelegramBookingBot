@@ -27,6 +27,14 @@ class Booking(StatesGroup):
     waiting_for_review = State()
 
 
+cancel_keyboard = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="❌ Отмена")]
+    ],
+    resize_keyboard=True
+)
+
+
 
 
 def main_menu(user_id=None):
@@ -453,7 +461,7 @@ async def get_time(message: Message, state: FSMContext):
 
     await message.answer(
         "Введите ваше имя:",
-        reply_markup=ReplyKeyboardRemove()
+        reply_markup=cancel_keyboard
     )
 
 
@@ -463,7 +471,8 @@ async def get_name(message: Message, state: FSMContext):
     await state.set_state(Booking.waiting_for_phone)
 
     await message.answer(
-        "Введите номер телефона:"
+        "Введите номер телефона:",
+        reply_markup=cancel_keyboard
     )
 
 
@@ -944,6 +953,15 @@ async def save_review(message: Message, state: FSMContext):
 
     await state.clear()
 
+@dp.message(F.text == "❌ Отмена")
+async def cancel_booking(message: Message, state: FSMContext):
+
+    await state.clear()
+
+    await message.answer(
+        "❌ Запись отменена.",
+        reply_markup=main_menu(message.from_user.id)
+    )
 
 async def main():
     await dp.start_polling(bot)
