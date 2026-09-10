@@ -31,6 +31,7 @@ class Booking(StatesGroup):
 
 def main_menu(user_id=None):
     keyboard = [
+        [KeyboardButton(text="👤 Личный кабинет")],
         [KeyboardButton(text="📅 Записаться")],
         [KeyboardButton(text="📋 Мои записи")],
         [KeyboardButton(text="💰 Прайс-лист")],
@@ -251,6 +252,74 @@ async def about(message: Message):
         "Работаем ежедневно с 09:00 до 20:00."
     )
 
+@dp.message(F.text == "👤 Личный кабинет")
+async def profile(message: Message):
+
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT name, phone
+    FROM applications
+    WHERE telegram_id = ?
+    ORDER BY id DESC
+    LIMIT 1
+    """, (message.from_user.id,))
+
+    user = cursor.fetchone()
+
+    cursor.execute("""
+    SELECT COUNT(*)
+    FROM applications
+    WHERE telegram_id = ?
+    """, (message.from_user.id,))
+
+    bookings_count = cursor.fetchone()[0]
+
+    cursor.execute("""
+    SELECT service, booking_date, booking_time
+    FROM applications
+    WHERE telegram_id = ?
+    ORDER BY id DESC
+    LIMIT 1
+    """, (message.from_user.id,))
+
+    last_booking = cursor.fetchone()
+
+    conn.close()
+
+    if not user:
+        await message.answer(
+            "❌ У вас пока нет записей."
+        )
+        return
+
+    name, phone = user
+
+    if bookings_count >= 10:
+        status = "🥇 VIP клиент"
+    elif bookings_count >= 5:
+        status = "🥈 Постоянный клиент"
+    else:
+        status = "🥉 Новый клиент"
+
+    text = (
+        f"👤 Личный кабинет\n\n"
+        f"🙍 Имя: {name}\n"
+        f"📞 Телефон: {phone}\n"
+        f"📅 Записей: {bookings_count}\n"
+        f"🏆 Статус: {status}\n\n"
+    )
+
+    if last_booking:
+        text += (
+            f"📌 Последняя запись:\n"
+            f"{last_booking[0]}\n"
+            f"📆 {last_booking[1]}\n"
+            f"🕒 {last_booking[2]}"
+        )
+
+    await message.answer(text)
 
 @dp.message(F.text == "📅 Записаться")
 async def booking(message: Message):
