@@ -588,6 +588,12 @@ async def schedule(message: Message):
 
     await message.answer(text)
 
+prices = {
+    "✂️ Стрижка": 1500,
+    "💅 Маникюр": 2000,
+    "🎨 Окрашивание": 5000
+}
+
 @dp.message(F.text == "📊 Статистика")
 async def statistics(message: Message):
     conn = sqlite3.connect("database.db")
@@ -624,7 +630,7 @@ async def statistics(message: Message):
 
     revenue = 0
     for service in services:
-        revenue += PRICES.get(service[0], 0)
+        revenue += prices.get(service[0], 0)
 
     conn.close()
 
@@ -687,11 +693,6 @@ async def revenue(message: Message):
     rows = cursor.fetchall()
     conn.close()
 
-    prices = {
-        "✂️ Стрижка": 1500,
-        "💅 Маникюр": 2000,
-        "🎨 Окрашивание": 5000
-    }
 
     total = 0
     text = "💰 Выручка\n\n"
