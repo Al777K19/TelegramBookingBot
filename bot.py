@@ -959,7 +959,11 @@ async def cancel_booking(message: Message, state: FSMContext):
     await state.clear()
 
     await message.answer(
-        "❌ Запись отменена.",
+        "❌ Запись отменена."
+    )
+
+    await message.answer(
+        "🏠 Главное меню",
         reply_markup=main_menu(message.from_user.id)
     )
 
