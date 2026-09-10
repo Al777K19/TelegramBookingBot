@@ -29,18 +29,38 @@ class Booking(StatesGroup):
 
 
 
-def main_menu():
+def main_menu(user_id=None):
+    keyboard = [
+        [KeyboardButton(text="📅 Записаться")],
+        [KeyboardButton(text="📋 Мои записи")],
+        [KeyboardButton(text="💰 Прайс-лист")],
+        [KeyboardButton(text="⭐ Отзывы")],
+        [KeyboardButton(text="⭐ Оставить отзыв")],
+        [KeyboardButton(text="📞 Контакты")],
+        [KeyboardButton(text="ℹ️ О нас")]
+    ]
+
+    if user_id:
+        conn = sqlite3.connect("database.db")
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        SELECT COUNT(*)
+        FROM applications
+        WHERE telegram_id = ?
+        """, (user_id,))
+
+        has_booking = cursor.fetchone()[0] > 0
+        conn.close()
+
+        if has_booking:
+            keyboard.insert(
+                2,
+                [KeyboardButton(text="❌ Отменить запись")]
+            )
+
     return ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="📅 Записаться")],
-            [KeyboardButton(text="📋 Мои записи")],
-            [KeyboardButton(text="❌ Отменить запись")],
-            [KeyboardButton(text="💰 Прайс-лист")],
-            [KeyboardButton(text="⭐ Отзывы")],
-            [KeyboardButton(text="⭐ Оставить отзыв")],
-            [KeyboardButton(text="📞 Контакты")],
-            [KeyboardButton(text="ℹ️ О нас")]
-        ],
+        keyboard=keyboard,
         resize_keyboard=True
     )
 
@@ -76,7 +96,7 @@ async def start(message: Message):
     menu = (
         admin_menu()
         if message.from_user.id == ADMIN_ID
-        else main_menu()
+        else main_menu(message.from_user.id)
     )
 
     await message.answer(
@@ -93,7 +113,7 @@ async def back_to_main(message: Message, state: FSMContext):
 
     await message.answer(
         "🏠 Главное меню",
-        reply_markup=main_menu()
+        reply_markup=main_menu(message.from_user.id)
     )
 
 
@@ -168,7 +188,8 @@ async def cancel_booking(message: Message):
     conn.close()
 
     await message.answer(
-        f"✅ Запись №{booking_id} отменена."
+        f"✅ Запись №{booking_id} отменена.",
+        reply_markup=main_menu(message.from_user.id)
     )
 
 @dp.message(F.text == "💰 Прайс-лист")
@@ -403,7 +424,7 @@ async def get_phone(message: Message, state: FSMContext):
         f"📞 Телефон: {data['phone']}\n\n"
         f"Мы свяжемся с вами в ближайшее время.\n"
         f"Спасибо за обращение!",
-        reply_markup=main_menu()
+        reply_markup=main_menu(message.from_user.id)
     )
 
     try:
