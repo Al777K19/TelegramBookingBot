@@ -749,7 +749,37 @@ async def save_review(message: Message, state: FSMContext):
 
     await state.clear()
 
+def init_db():
+    conn = sqlite3.connect("/data/database.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS applications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        service TEXT,
+        booking_date TEXT,
+        booking_time TEXT,
+        name TEXT,
+        phone TEXT,
+        telegram_id INTEGER,
+        username TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS reviews (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        review TEXT
+    )
+    """)
+
+    conn.commit()
+    conn.close()
+
 async def main():
+    init_db()
     await dp.start_polling(bot)
 
 
