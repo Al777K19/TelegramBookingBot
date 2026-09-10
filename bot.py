@@ -175,9 +175,9 @@ async def cancel_booking(message: Message):
 async def price(message: Message):
     await message.answer(
         "💰 Прайс-лист\n\n"
-        "✂️ Стрижка — 20 €\n"
-        "💅 Маникюр — 25 €\n"
-        "🎨 Окрашивание — 50 €"
+        "✂️ Стрижка — 1500 ₽\n"
+        "💅 Маникюр — 2000 ₽\n"
+        "🎨 Окрашивание — 5000 ₽"
     )
 
 
@@ -261,18 +261,41 @@ async def service_selected(message: Message, state: FSMContext):
 @dp.message(Booking.waiting_for_date)
 async def get_date(message: Message, state: FSMContext):
     await state.update_data(date=message.text)
-    await state.set_state(Booking.waiting_for_time)
+
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT booking_time
+    FROM applications
+    WHERE booking_date = ?
+    """, (message.text,))
+
+    busy_times = [row[0] for row in cursor.fetchall()]
+    conn.close()
+
+    all_times = ["09:00", "11:00", "13:00", "15:00", "17:00"]
+
+    free_times = [
+        time for time in all_times
+        if time not in busy_times
+    ]
+
+    if not free_times:
+        await message.answer(
+            "❌ На выбранную дату свободного времени нет."
+        )
+        return
 
     keyboard = ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="09:00")],
-            [KeyboardButton(text="11:00")],
-            [KeyboardButton(text="13:00")],
-            [KeyboardButton(text="15:00")],
-            [KeyboardButton(text="17:00")]
+            [KeyboardButton(text=time)]
+            for time in free_times
         ],
         resize_keyboard=True
     )
+
+    await state.set_state(Booking.waiting_for_time)
 
     await message.answer(
         "🕒 Выберите время:",
@@ -545,22 +568,52 @@ async def schedule(message: Message):
     await message.answer(text)
 
 @dp.message(F.text == "📊 Статистика")
-async def stats(message: Message):
-
-    if message.from_user.id != ADMIN_ID:
-        return
-
+async def statistics(message: Message):
     conn = sqlite3.connect("database.db")
     cursor = conn.cursor()
 
+    # Всего записей
     cursor.execute("SELECT COUNT(*) FROM applications")
-    total = cursor.fetchone()[0]
+    total_bookings = cursor.fetchone()[0]
+
+    # Уникальные клиенты
+    cursor.execute("SELECT COUNT(DISTINCT telegram_id) FROM applications")
+    total_clients = cursor.fetchone()[0]
+
+    # Самая популярная услуга
+    cursor.execute("""
+        SELECT service, COUNT(*)
+        FROM applications
+        GROUP BY service
+        ORDER BY COUNT(*) DESC
+        LIMIT 1
+    """)
+    popular = cursor.fetchone()
+
+    if popular:
+        service_name = popular[0]
+        service_count = popular[1]
+    else:
+        service_name = "Нет данных"
+        service_count = 0
+
+    # Выручка
+    cursor.execute("SELECT service FROM applications")
+    services = cursor.fetchall()
+
+    revenue = 0
+    for service in services:
+        revenue += PRICES.get(service[0], 0)
 
     conn.close()
 
     await message.answer(
         f"📊 Статистика\n\n"
-        f"Всего заявок: {total}"
+        f"👥 Клиентов: {total_clients}\n"
+        f"📅 Записей: {total_bookings}\n"
+        f"🏆 Популярная услуга: {service_name}\n"
+        f"🔢 Записей на неё: {service_count}\n"
+        f"💰 Выручка: {revenue} ₽"
     )
 
 @dp.message(F.text == "👥 Клиенты")
@@ -614,9 +667,9 @@ async def revenue(message: Message):
     conn.close()
 
     prices = {
-        "✂️ Стрижка": 20,
-        "💅 Маникюр": 25,
-        "🎨 Окрашивание": 50
+        "✂️ Стрижка": 1500,
+        "💅 Маникюр": 2000,
+        "🎨 Окрашивание": 5000
     }
 
     total = 0
@@ -628,10 +681,10 @@ async def revenue(message: Message):
 
         text += (
             f"{service}\n"
-            f"{count} × {prices.get(service, 0)}€ = {revenue}€\n\n"
+            f"{count} × {prices.get(service, 0)}₽ = {revenue}₽\n\n"
         )
 
-    text += f"💵 Итого: {total}€"
+    text += f"💵 Итого: {total}₽"
 
     await message.answer(text)
 
