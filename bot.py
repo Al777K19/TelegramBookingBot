@@ -1,6 +1,5 @@
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 import asyncio
@@ -8,7 +7,7 @@ import os
 import re
 import sqlite3
 import psycopg2
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ADMIN_ID = 6840202483
@@ -59,7 +58,7 @@ def main_menu(user_id=None):
         cursor.execute("""
         SELECT COUNT(*)
         FROM applications
-        WHERE telegram_id = ?
+        WHERE telegram_id = %s
         """, (user_id,))
 
         has_booking = cursor.fetchone()[0] > 0
@@ -146,7 +145,7 @@ async def my_bookings_button(message: Message):
     cursor.execute("""
     SELECT id, service, booking_date, booking_time
     FROM applications
-    WHERE telegram_id = ?
+    WHERE telegram_id = %s
     ORDER BY id DESC
     """, (message.from_user.id,))
 
@@ -180,7 +179,7 @@ async def cancel_booking(message: Message):
     cursor.execute("""
     SELECT id
     FROM applications
-    WHERE telegram_id = ?
+    WHERE telegram_id = %s
     ORDER BY id DESC
     LIMIT 1
     """, (message.from_user.id,))
@@ -195,7 +194,7 @@ async def cancel_booking(message: Message):
     booking_id = row[0]
 
     cursor.execute(
-        "DELETE FROM applications WHERE id = ?",
+        "DELETE FROM applications WHERE id = %s",
         (booking_id,)
     )
 
@@ -279,7 +278,7 @@ async def profile(message: Message):
     cursor.execute("""
     SELECT name, phone
     FROM applications
-    WHERE telegram_id = ?
+    WHERE telegram_id = %s
     ORDER BY id DESC
     LIMIT 1
     """, (message.from_user.id,))
@@ -289,7 +288,7 @@ async def profile(message: Message):
     cursor.execute("""
     SELECT COUNT(*)
     FROM applications
-    WHERE telegram_id = ?
+    WHERE telegram_id = %s
     """, (message.from_user.id,))
 
     bookings_count = cursor.fetchone()[0]
@@ -297,7 +296,7 @@ async def profile(message: Message):
     cursor.execute("""
     SELECT service, booking_date, booking_time
     FROM applications
-    WHERE telegram_id = ?
+    WHERE telegram_id = %s
     ORDER BY id DESC
     LIMIT 1
     """, (message.from_user.id,))
@@ -401,7 +400,7 @@ async def get_date(message: Message, state: FSMContext):
     cursor.execute("""
     SELECT booking_time
     FROM applications
-    WHERE booking_date = ?
+    WHERE booking_date = %s
     """, (message.text,))
 
     busy_times = [row[0] for row in cursor.fetchall()]
@@ -474,8 +473,8 @@ async def get_time(message: Message, state: FSMContext):
     cursor.execute("""
     SELECT COUNT(*)
     FROM applications
-    WHERE booking_date = ?
-    AND booking_time = ?
+    WHERE booking_date = %s
+    AND booking_time = %s
     """, (
         data["date"],
         message.text
@@ -554,8 +553,8 @@ async def get_phone(message: Message, state: FSMContext):
     cursor.execute("""
     SELECT COUNT(*)
     FROM applications
-    WHERE booking_date = ?
-    AND booking_time = ?
+    WHERE booking_date = %s
+    AND booking_time = %s
     """, (
         data["date"],
         data["time"]
@@ -574,7 +573,8 @@ async def get_phone(message: Message, state: FSMContext):
     cursor.execute("""
     INSERT INTO applications
     (service, booking_date, booking_time, name, phone, telegram_id, username)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    VALUES (%s, %s, %s, %s, %s, %s, %s)
+    RETURNING id
     """, (
         data["service"],
         data["date"],
@@ -585,9 +585,9 @@ async def get_phone(message: Message, state: FSMContext):
         message.from_user.username
     ))
 
-    conn.commit()
+    application_number = cursor.fetchone()[0]
 
-    application_number = cursor.lastrowid
+    conn.commit()
 
     conn.close()
 
@@ -712,38 +712,6 @@ async def stats(message: Message):
 
     await message.answer(text)
 
-@dp.message(Command("schedule"))
-async def schedule(message: Message):
-    if message.from_user.id != ADMIN_ID:
-        return
-
-    from db import get_connection
-
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-    SELECT booking_date, booking_time, service, name
-    FROM applications
-    ORDER BY booking_date, booking_time
-    """)
-
-    rows = cursor.fetchall()
-    conn.close()
-
-    if not rows:
-        await message.answer("Записей пока нет.")
-        return
-
-    text = "📅 Расписание\n\n"
-
-    for date, time, service, name in rows:
-        text += (
-            f"📆 {date}\n"
-            f"🕒 {time} — {service} — {name}\n\n"
-        )
-
-    await message.answer(text)
 
 @dp.message(F.text == "📅 Расписание")
 async def schedule(message: Message):
@@ -790,6 +758,9 @@ prices = {
 
 @dp.message(F.text == "📊 Статистика")
 async def statistics(message: Message):
+    if message.from_user.id != ADMIN_ID:
+        return
+
     from db import get_connection
 
     conn = get_connection()
@@ -1012,7 +983,7 @@ async def save_review(message: Message, state: FSMContext):
 
     cursor.execute("""
     INSERT INTO reviews (name, review)
-    VALUES (?, ?)
+    VALUES (%s, %s)
     """, (
         message.from_user.full_name,
         message.text
@@ -1029,7 +1000,7 @@ async def save_review(message: Message, state: FSMContext):
     await state.clear()
 
 @dp.message(F.text == "❌ Отмена")
-async def cancel_booking(message: Message, state: FSMContext):
+async def cancel_action(message: Message, state: FSMContext):
 
     await state.clear()
 
