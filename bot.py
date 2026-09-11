@@ -5,8 +5,7 @@ from aiogram.fsm.context import FSMContext
 import asyncio
 import os
 import re
-import sqlite3
-import psycopg2
+from datetime import datetime, timedelta
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 
 
@@ -388,13 +387,17 @@ async def service_selected(message: Message, state: FSMContext):
     await state.update_data(service=message.text)
     await state.set_state(Booking.waiting_for_date)
 
+    today = datetime.now().date()
+
     keyboard = ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="Сегодня")],
-            [KeyboardButton(text="Завтра")],
-            [KeyboardButton(text="Послезавтра")],
-            [KeyboardButton(text="❌ Отмена")]
-        ],
+                     [KeyboardButton(
+                         text=(today + timedelta(days=i)).strftime("%d.%m.%Y")
+                     )]
+                     for i in range(7)
+                 ] + [
+                     [KeyboardButton(text="❌ Отмена")]
+                 ],
         resize_keyboard=True
     )
 
@@ -415,19 +418,29 @@ async def get_date(message: Message, state: FSMContext):
         )
         return
 
-    allowed_dates = [
-        "Сегодня",
-        "Завтра",
-        "Послезавтра"
-    ]
-
-    if message.text not in allowed_dates:
+    try:
+        selected_date = datetime.strptime(
+            message.text,
+            "%d.%m.%Y"
+        ).date()
+    except ValueError:
         await message.answer(
             "⚠️ Пожалуйста, выберите дату кнопкой."
         )
         return
 
-    await state.update_data(date=message.text)
+    today = datetime.now().date()
+
+    # Защита от выбора прошедшей даты
+    if selected_date < today:
+        await message.answer(
+            "❌ Нельзя выбрать прошедшую дату."
+        )
+        return
+
+    await state.update_data(
+        date=selected_date.strftime("%Y-%m-%d")
+    )
 
     from db import get_connection
 
@@ -438,12 +451,36 @@ async def get_date(message: Message, state: FSMContext):
     SELECT booking_time
     FROM applications
     WHERE booking_date = %s
-    """, (message.text,))
+    AND status != 'cancelled'
+    """, (
+        selected_date.strftime("%Y-%m-%d"),
+    ))
 
     busy_times = [row[0] for row in cursor.fetchall()]
+
     conn.close()
 
-    all_times = ["09:00", "11:00", "13:00", "15:00", "17:00"]
+    all_times = [
+        "09:00",
+        "11:00",
+        "13:00",
+        "15:00",
+        "17:00"
+    ]
+
+    # Если выбрали сегодняшний день,
+    # убираем уже прошедшее время
+    if selected_date == today:
+
+        current_time = datetime.now().time()
+
+        all_times = [
+            time for time in all_times
+            if datetime.strptime(
+                time,
+                "%H:%M"
+            ).time() > current_time
+        ]
 
     free_times = [
         time for time in all_times
@@ -469,7 +506,7 @@ async def get_date(message: Message, state: FSMContext):
     await state.set_state(Booking.waiting_for_time)
 
     await message.answer(
-        "🕒 Выберите время:",
+        "🕒 Выберите свободное время:",
         reply_markup=keyboard
     )
 
