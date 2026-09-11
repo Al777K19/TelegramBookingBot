@@ -6,7 +6,11 @@ import asyncio
 import os
 import re
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+
+
+TIMEZONE = ZoneInfo("Asia/Almaty")
 
 
 def init_database():
@@ -392,7 +396,7 @@ async def service_selected(message: Message, state: FSMContext):
     await state.update_data(service=message.text)
     await state.set_state(Booking.waiting_for_date)
 
-    today = datetime.now().date()
+    today = datetime.now(TIMEZONE).date()
 
     keyboard = ReplyKeyboardMarkup(
         keyboard=[
@@ -434,7 +438,7 @@ async def get_date(message: Message, state: FSMContext):
         )
         return
 
-    today = datetime.now().date()
+    today = datetime.now(TIMEZONE).date()
 
     # Защита от выбора прошедшей даты
     if selected_date < today:
@@ -477,7 +481,7 @@ async def get_date(message: Message, state: FSMContext):
     # убираем уже прошедшее время
     if selected_date == today:
 
-        current_time = datetime.now().time()
+        current_time = datetime.now(TIMEZONE).time()
 
         all_times = [
             time for time in all_times
