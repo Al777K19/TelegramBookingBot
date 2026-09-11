@@ -7,7 +7,15 @@ import os
 import re
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+from aiogram.types import (
+    Message,
+    ReplyKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardRemove,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    CallbackQuery
+)
 
 
 TIMEZONE = ZoneInfo("Asia/Almaty")
@@ -188,30 +196,125 @@ async def my_bookings_button(message: Message):
     cursor = conn.cursor()
 
     cursor.execute("""
-    SELECT id, service, booking_date, booking_time
+    SELECT id, service, booking_date, booking_time, status
     FROM applications
     WHERE telegram_id = %s
-    ORDER BY id DESC
+    AND status != 'cancelled'
+    ORDER BY booking_date, booking_time
     """, (message.from_user.id,))
 
     rows = cursor.fetchall()
     conn.close()
 
     if not rows:
-        await message.answer("У вас пока нет записей.")
+        await message.answer(
+            "📋 У вас пока нет активных записей."
+        )
         return
 
-    text = "📋 Ваши записи\n\n"
-
     for row in rows:
-        text += (
-            f"🆔 #{row[0]}\n"
-            f"✂️ Услуга: {row[1]}\n"
-            f"📆 Дата: {row[2]}\n"
-            f"🕒 Время: {row[3]}\n\n"
+
+        booking_id = row[0]
+        service = row[1]
+        booking_date = row[2]
+        booking_time = row[3]
+        status = row[4]
+
+        if status == "pending":
+            status_text = "🟡 Ожидает обработки"
+        elif status == "confirmed":
+            status_text = "🟢 Подтверждена"
+        elif status == "completed":
+            status_text = "🔵 Завершена"
+        else:
+            status_text = "⚪ Неизвестный статус"
+
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text=f"❌ Отменить #{booking_id:04d}",
+                        callback_data=f"user_cancel_{booking_id}"
+                    )
+                ]
+            ]
         )
 
-    await message.answer(text)
+        await message.answer(
+            f"🆔 Запись #{booking_id:04d}\n\n"
+            f"✂️ Услуга: {service}\n"
+            f"📆 Дата: {booking_date}\n"
+            f"🕒 Время: {booking_time}\n"
+            f"📌 Статус: {status_text}",
+            reply_markup=keyboard
+        )
+
+@dp.callback_query(F.data.startswith("user_cancel_"))
+async def user_cancel_booking(callback: CallbackQuery):
+
+    booking_id = int(
+        callback.data.replace("user_cancel_", "")
+    )
+
+    from db import get_connection
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT service, booking_date, booking_time, status
+    FROM applications
+    WHERE id = %s
+    AND telegram_id = %s
+    """, (
+        booking_id,
+        callback.from_user.id
+    ))
+
+    booking = cursor.fetchone()
+
+    if not booking:
+        conn.close()
+
+        await callback.answer(
+            "❌ Запись не найдена.",
+            show_alert=True
+        )
+        return
+
+    service, booking_date, booking_time, status = booking
+
+    if status == "cancelled":
+        conn.close()
+
+        await callback.answer(
+            "Эта запись уже отменена.",
+            show_alert=True
+        )
+        return
+
+    cursor.execute("""
+    UPDATE applications
+    SET status = 'cancelled'
+    WHERE id = %s
+    AND telegram_id = %s
+    """, (
+        booking_id,
+        callback.from_user.id
+    ))
+
+    conn.commit()
+    conn.close()
+
+    await callback.message.edit_text(
+        f"❌ Запись #{booking_id:04d} отменена.\n\n"
+        f"✂️ Услуга: {service}\n"
+        f"📆 Дата: {booking_date}\n"
+        f"🕒 Время: {booking_time}"
+    )
+
+    await callback.answer("Запись отменена")
+
 
 @dp.message(F.text == "❌ Отменить запись")
 async def cancel_booking(message: Message):
