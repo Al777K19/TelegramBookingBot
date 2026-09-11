@@ -92,8 +92,7 @@ def services_menu():
             [KeyboardButton(text="✂️ Стрижка")],
             [KeyboardButton(text="💅 Маникюр")],
             [KeyboardButton(text="🎨 Окрашивание")],
-            [KeyboardButton(text="⬅️ Назад")],
-            [KeyboardButton(text="🏠 Главное меню")]
+            [KeyboardButton(text="❌ Отмена")]
         ],
         resize_keyboard=True
     )
@@ -412,6 +411,8 @@ async def get_date(message: Message, state: FSMContext):
         keyboard=[
             [KeyboardButton(text=time)]
             for time in free_times
+        ] + [
+            [KeyboardButton(text="❌ Отмена")]
         ],
         resize_keyboard=True
     )
