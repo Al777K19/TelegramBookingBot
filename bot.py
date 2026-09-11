@@ -30,6 +30,11 @@ def init_database():
     """)
 
     cursor.execute("""
+    ALTER TABLE applications
+    ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending'
+    """)
+
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS reviews (
         id SERIAL PRIMARY KEY,
         name TEXT,
