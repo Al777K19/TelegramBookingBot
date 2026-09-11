@@ -7,6 +7,7 @@ import asyncio
 import os
 import re
 import sqlite3
+import psycopg2
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")

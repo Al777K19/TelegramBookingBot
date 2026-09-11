@@ -1,11 +1,11 @@
-import sqlite3
+from db import get_connection
 
-conn = sqlite3.connect("database.db")
+conn = get_connection()
 cursor = conn.cursor()
 
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS reviews (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     name TEXT,
     review TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
