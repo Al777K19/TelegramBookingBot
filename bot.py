@@ -346,7 +346,8 @@ async def service_selected(message: Message, state: FSMContext):
         keyboard=[
             [KeyboardButton(text="Сегодня")],
             [KeyboardButton(text="Завтра")],
-            [KeyboardButton(text="Послезавтра")]
+            [KeyboardButton(text="Послезавтра")],
+            [KeyboardButton(text="❌ Отмена")]
         ],
         resize_keyboard=True
     )
@@ -358,6 +359,15 @@ async def service_selected(message: Message, state: FSMContext):
 
 @dp.message(Booking.waiting_for_date)
 async def get_date(message: Message, state: FSMContext):
+
+    if message.text == "❌ Отмена":
+        await state.clear()
+
+        await message.answer(
+            "❌ Запись отменена.",
+            reply_markup=main_menu(message.from_user.id)
+        )
+        return
 
     allowed_dates = [
         "Сегодня",
@@ -416,6 +426,15 @@ async def get_date(message: Message, state: FSMContext):
 
 @dp.message(Booking.waiting_for_time)
 async def get_time(message: Message, state: FSMContext):
+
+    if message.text == "❌ Отмена":
+        await state.clear()
+
+        await message.answer(
+            "❌ Запись отменена.",
+            reply_markup=main_menu(message.from_user.id)
+        )
+        return
 
     allowed_times = [
         "09:00",
