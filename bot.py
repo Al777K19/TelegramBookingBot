@@ -504,19 +504,19 @@ async def get_name(message: Message, state: FSMContext):
         reply_markup=cancel_keyboard
     )
 
-    @dp.message(Booking.waiting_for_phone)
-    async def get_phone(message: Message, state: FSMContext):
+@dp.message(Booking.waiting_for_phone)
+async def get_phone(message: Message, state: FSMContext):
 
-        if message.text == "❌ Отмена":
-            await state.clear()
+    if message.text == "❌ Отмена":
+        await state.clear()
 
-            await message.answer(
-                "❌ Запись отменена.",
-                reply_markup=main_menu(message.from_user.id)
-            )
-            return
+        await message.answer(
+            "❌ Запись отменена.",
+            reply_markup=main_menu(message.from_user.id)
+        )
+        return
 
-        phone = message.text.strip()
+    phone = message.text.strip()
 
     if not re.fullmatch(r"[\d+\-\s()]{6,20}", phone):
         await message.answer(
