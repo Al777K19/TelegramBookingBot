@@ -88,8 +88,6 @@ cancel_keyboard = ReplyKeyboardMarkup(
 )
 
 
-
-
 def main_menu(user_id=None):
     keyboard = [
         [KeyboardButton(text="👤 Личный кабинет")],
@@ -102,31 +100,11 @@ def main_menu(user_id=None):
         [KeyboardButton(text="ℹ️ О нас")]
     ]
 
-    if user_id:
-        from db import get_connection
-
-        conn = get_connection()
-        cursor = conn.cursor()
-
-        cursor.execute("""
-        SELECT COUNT(*)
-        FROM applications
-        WHERE telegram_id = %s
-        """, (user_id,))
-
-        has_booking = cursor.fetchone()[0] > 0
-        conn.close()
-
-        if has_booking:
-            keyboard.insert(
-                2,
-                [KeyboardButton(text="❌ Отменить запись")]
-            )
-
     return ReplyKeyboardMarkup(
         keyboard=keyboard,
         resize_keyboard=True
     )
+
 
 def admin_menu():
     return ReplyKeyboardMarkup(
@@ -315,44 +293,6 @@ async def user_cancel_booking(callback: CallbackQuery):
 
     await callback.answer("Запись отменена")
 
-
-@dp.message(F.text == "❌ Отменить запись")
-async def cancel_booking(message: Message):
-
-    from db import get_connection
-
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-    SELECT id
-    FROM applications
-    WHERE telegram_id = %s
-    ORDER BY id DESC
-    LIMIT 1
-    """, (message.from_user.id,))
-
-    row = cursor.fetchone()
-
-    if not row:
-        conn.close()
-        await message.answer("У вас нет активных записей.")
-        return
-
-    booking_id = row[0]
-
-    cursor.execute(
-        "DELETE FROM applications WHERE id = %s",
-        (booking_id,)
-    )
-
-    conn.commit()
-    conn.close()
-
-    await message.answer(
-        f"✅ Запись №{booking_id} отменена.",
-        reply_markup=main_menu(message.from_user.id)
-    )
 
 @dp.message(F.text == "💰 Прайс-лист")
 async def price(message: Message):
