@@ -51,7 +51,9 @@ def main_menu(user_id=None):
     ]
 
     if user_id:
-        conn = sqlite3.connect("database.db")
+        from db import get_connection
+
+        conn = get_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -136,7 +138,9 @@ async def back(message: Message):
 @dp.message(F.text == "📋 Мои записи")
 async def my_bookings_button(message: Message):
 
-    conn = sqlite3.connect("database.db")
+    from db import get_connection
+
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -168,7 +172,9 @@ async def my_bookings_button(message: Message):
 @dp.message(F.text == "❌ Отменить запись")
 async def cancel_booking(message: Message):
 
-    conn = sqlite3.connect("database.db")
+    from db import get_connection
+
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -214,7 +220,9 @@ async def price(message: Message):
 @dp.message(F.text == "⭐ Отзывы")
 async def reviews(message: Message):
 
-    conn = sqlite3.connect("database.db")
+    from db import get_connection
+
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -263,7 +271,9 @@ async def about(message: Message):
 @dp.message(F.text == "👤 Личный кабинет")
 async def profile(message: Message):
 
-    conn = sqlite3.connect("database.db")
+    from db import get_connection
+
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -383,7 +393,9 @@ async def get_date(message: Message, state: FSMContext):
 
     await state.update_data(date=message.text)
 
-    conn = sqlite3.connect("database.db")
+    from db import get_connection
+
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -454,7 +466,9 @@ async def get_time(message: Message, state: FSMContext):
 
     data = await state.get_data()
 
-    conn = sqlite3.connect("database.db")
+    from db import get_connection
+
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -530,7 +544,9 @@ async def get_phone(message: Message, state: FSMContext):
     await state.update_data(phone=phone)
 
     data = await state.get_data()
-    conn = sqlite3.connect("database.db")
+    from db import get_connection
+
+    conn = get_connection()
     cursor = conn.cursor()
 
     # Проверка: занято ли время
@@ -619,7 +635,9 @@ async def applications(message: Message):
         await message.answer("⛔ Доступ запрещён")
         return
 
-    conn = sqlite3.connect("database.db")
+    from db import get_connection
+
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -653,7 +671,9 @@ async def count_applications(message: Message):
     if message.from_user.id != ADMIN_ID:
         return
 
-    conn = sqlite3.connect("database.db")
+    from db import get_connection
+
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("SELECT COUNT(*) FROM applications")
@@ -668,7 +688,9 @@ async def stats(message: Message):
     if message.from_user.id != ADMIN_ID:
         return
 
-    conn = sqlite3.connect("database.db")
+    from db import get_connection
+
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("SELECT COUNT(*) FROM applications")
@@ -695,7 +717,9 @@ async def schedule(message: Message):
     if message.from_user.id != ADMIN_ID:
         return
 
-    conn = sqlite3.connect("database.db")
+    from db import get_connection
+
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -727,7 +751,9 @@ async def schedule(message: Message):
     if message.from_user.id != ADMIN_ID:
         return
 
-    conn = sqlite3.connect("database.db")
+    from db import get_connection
+
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -764,7 +790,9 @@ prices = {
 
 @dp.message(F.text == "📊 Статистика")
 async def statistics(message: Message):
-    conn = sqlite3.connect("database.db")
+    from db import get_connection
+
+    conn = get_connection()
     cursor = conn.cursor()
 
     # Всего записей
@@ -817,7 +845,9 @@ async def clients(message: Message):
     if message.from_user.id != ADMIN_ID:
         return
 
-    conn = sqlite3.connect("database.db")
+    from db import get_connection
+
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -849,7 +879,9 @@ async def revenue(message: Message):
     if message.from_user.id != ADMIN_ID:
         return
 
-    conn = sqlite3.connect("database.db")
+    from db import get_connection
+
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -918,7 +950,9 @@ async def confirm_broadcast(message: Message, state: FSMContext):
     data = await state.get_data()
     text_to_send = data["broadcast_text"]
 
-    conn = sqlite3.connect("database.db")
+    from db import get_connection
+
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -971,7 +1005,9 @@ async def review_start(message: Message, state: FSMContext):
 @dp.message(Booking.waiting_for_review)
 async def save_review(message: Message, state: FSMContext):
 
-    conn = sqlite3.connect("database.db")
+    from db import get_connection
+
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
