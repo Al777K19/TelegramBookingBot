@@ -467,6 +467,16 @@ async def get_time(message: Message, state: FSMContext):
 
 @dp.message(Booking.waiting_for_name)
 async def get_name(message: Message, state: FSMContext):
+
+    if message.text == "❌ Отмена":
+        await state.clear()
+
+        await message.answer(
+            "❌ Запись отменена.",
+            reply_markup=main_menu(message.from_user.id)
+        )
+        return
+
     await state.update_data(name=message.text)
     await state.set_state(Booking.waiting_for_phone)
 
@@ -475,11 +485,19 @@ async def get_name(message: Message, state: FSMContext):
         reply_markup=cancel_keyboard
     )
 
+    @dp.message(Booking.waiting_for_phone)
+    async def get_phone(message: Message, state: FSMContext):
 
-@dp.message(Booking.waiting_for_phone)
-async def get_phone(message: Message, state: FSMContext):
+        if message.text == "❌ Отмена":
+            await state.clear()
 
-    phone = message.text.strip()
+            await message.answer(
+                "❌ Запись отменена.",
+                reply_markup=main_menu(message.from_user.id)
+            )
+            return
+
+        phone = message.text.strip()
 
     if not re.fullmatch(r"[\d+\-\s()]{6,20}", phone):
         await message.answer(
