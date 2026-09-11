@@ -646,6 +646,7 @@ async def get_name(message: Message, state: FSMContext):
         reply_markup=cancel_keyboard
     )
 
+
 @dp.message(Booking.waiting_for_phone)
 async def get_phone(message: Message, state: FSMContext):
 
@@ -670,13 +671,13 @@ async def get_phone(message: Message, state: FSMContext):
     await state.update_data(phone=phone)
 
     data = await state.get_data()
+
     from db import get_connection
 
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Проверка: занято ли время
-
+    # Проверяем, не занято ли время
     cursor.execute("""
     SELECT COUNT(*)
     FROM applications
@@ -688,37 +689,59 @@ async def get_phone(message: Message, state: FSMContext):
         data["time"]
     ))
 
-    if cursor.fetchone()[0] > 0:
+    count = cursor.fetchone()[0]
+
+    if count > 0:
         conn.close()
 
         await message.answer(
-            "❌ Это время уже занято.\nВыберите другую дату или время."
+            "❌ Это время уже занято.\n\n"
+            "Пожалуйста, выберите другое время.",
+            reply_markup=main_menu(message.from_user.id)
         )
 
         await state.clear()
         return
 
-    cursor.execute("""
-    INSERT INTO applications
-    (service, booking_date, booking_time, name, phone, telegram_id, username)
-    VALUES (%s, %s, %s, %s, %s, %s, %s)
-    RETURNING id
-    """, (
-        data["service"],
-        data["date"],
-        data["time"],
-        data["name"],
-        phone,
-        message.from_user.id,
-        message.from_user.username
-    ))
+    # Создаём запись
+    try:
 
-    application_number = cursor.fetchone()[0]
+        cursor.execute("""
+        INSERT INTO applications
+        (service, booking_date, booking_time, name, phone, telegram_id, username)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        RETURNING id
+        """, (
+            data["service"],
+            data["date"],
+            data["time"],
+            data["name"],
+            phone,
+            message.from_user.id,
+            message.from_user.username
+        ))
 
-    conn.commit()
+        application_number = cursor.fetchone()[0]
+
+        conn.commit()
+
+    except Exception as e:
+
+        conn.rollback()
+        conn.close()
+
+        print(f"Ошибка создания записи: {e}")
+
+        await message.answer(
+            "❌ К сожалению, это время только что занял другой клиент.\n\n"
+            "Пожалуйста, выберите другое время.",
+            reply_markup=main_menu(message.from_user.id)
+        )
+
+        await state.clear()
+        return
 
     conn.close()
-
 
     username = (
         f"@{message.from_user.username}"
@@ -739,6 +762,7 @@ async def get_phone(message: Message, state: FSMContext):
         reply_markup=main_menu(message.from_user.id)
     )
 
+    # Уведомление администратора
     try:
         await bot.send_message(
             ADMIN_ID,
@@ -748,14 +772,16 @@ async def get_phone(message: Message, state: FSMContext):
             f"📆 Дата: {data['date']}\n"
             f"🕒 Время: {data['time']}\n"
             f"👤 Имя: {data['name']}\n"
-            f"📞 Телефон: {data['phone']}\n\n" 
+            f"📞 Телефон: {data['phone']}\n\n"
             f"👤 Telegram: {username}\n"
             f"ID: {message.from_user.id}"
         )
+
     except Exception as e:
-        print(f'Ошибка отправки админу: {e}')
+        print(f"Ошибка отправки админу: {e}")
 
     await state.clear()
+
 
 @dp.message(Command("applications"))
 async def applications(message: Message):
