@@ -199,7 +199,7 @@ async def my_bookings_button(message: Message):
         status = row[4]
 
         if status == "pending":
-            status_text = "🟡 Ожидает обработки"
+            status_text = "📌 Запись оформлена"
         elif status == "confirmed":
             status_text = "🟢 Подтверждена"
         elif status == "completed":
@@ -601,6 +601,7 @@ async def get_time(message: Message, state: FSMContext):
     FROM applications
     WHERE booking_date = %s
     AND booking_time = %s
+    AND status != 'cancelled'
     """, (
         data["date"],
         message.text
@@ -681,6 +682,7 @@ async def get_phone(message: Message, state: FSMContext):
     FROM applications
     WHERE booking_date = %s
     AND booking_time = %s
+    AND status != 'cancelled'
     """, (
         data["date"],
         data["time"]
