@@ -9,6 +9,43 @@ import sqlite3
 import psycopg2
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 
+
+def init_database():
+    from db import get_connection
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS applications (
+        id SERIAL PRIMARY KEY,
+        service TEXT,
+        booking_date TEXT,
+        booking_time TEXT,
+        name TEXT,
+        phone TEXT,
+        telegram_id BIGINT,
+        username TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS reviews (
+        id SERIAL PRIMARY KEY,
+        name TEXT,
+        review TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    print("✅ База данных проверена")
+
+
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ADMIN_ID = 6840202483
 
@@ -1014,6 +1051,7 @@ async def cancel_action(message: Message, state: FSMContext):
     )
 
 async def main():
+    init_database()
     await dp.start_polling(bot)
 
 
