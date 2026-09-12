@@ -306,9 +306,6 @@ async def price(message: Message):
         "⭐ Возможна оплата Telegram Stars"
     )
 
-@dp.message(F.text == "⭐ Отзывы")
-async def reviews(message: Message):
-
 
 @dp.message(F.text == "⭐ Отзывы")
 async def reviews(message: Message):
