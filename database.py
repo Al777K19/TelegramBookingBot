@@ -17,6 +17,11 @@ CREATE TABLE IF NOT EXISTS applications (
 )
 """)
 
+cursor.execute("""
+ALTER TABLE applications
+ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending'
+""")
+
 conn.commit()
 conn.close()
 

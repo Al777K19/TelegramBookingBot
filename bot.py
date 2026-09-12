@@ -7,6 +7,7 @@ import os
 import re
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+from aiogram.types import LabeledPrice, PreCheckoutQuery
 from aiogram.types import (
     Message,
     ReplyKeyboardMarkup,
@@ -294,14 +295,19 @@ async def user_cancel_booking(callback: CallbackQuery):
     await callback.answer("Запись отменена")
 
 
+
 @dp.message(F.text == "💰 Прайс-лист")
 async def price(message: Message):
     await message.answer(
         "💰 Прайс-лист\n\n"
-        "✂️ Стрижка — 1500 ₽\n"
-        "💅 Маникюр — 2000 ₽\n"
-        "🎨 Окрашивание — 5000 ₽"
+        "✂️ Стрижка — 1500 ₽ (100 ⭐)\n"
+        "💅 Маникюр — 2000 ₽ (150 ⭐)\n"
+        "🎨 Окрашивание — 5000 ₽ (300 ⭐)\n\n"
+        "⭐ Возможна оплата Telegram Stars"
     )
+
+@dp.message(F.text == "⭐ Отзывы")
+async def reviews(message: Message):
 
 
 @dp.message(F.text == "⭐ Отзывы")
@@ -762,6 +768,20 @@ async def get_phone(message: Message, state: FSMContext):
         reply_markup=main_menu(message.from_user.id)
     )
 
+    await bot.send_invoice(
+        chat_id=message.chat.id,
+        title="Оплата услуги",
+        description=f"Оплата услуги {data['service']}",
+        payload=f"booking_{application_number}",
+        currency="XTR",
+        prices=[
+            LabeledPrice(
+                label=data["service"],
+                amount=prices_stars[data["service"]]
+            )
+        ]
+    )
+
     # Уведомление администратора
     try:
         await bot.send_message(
@@ -908,6 +928,12 @@ prices = {
     "✂️ Стрижка": 1500,
     "💅 Маникюр": 2000,
     "🎨 Окрашивание": 5000
+}
+
+prices_stars = {
+    "✂️ Стрижка": 100,
+    "💅 Маникюр": 150,
+    "🎨 Окрашивание": 300
 }
 
 @dp.message(F.text == "📊 Статистика")
@@ -1165,6 +1191,17 @@ async def cancel_action(message: Message, state: FSMContext):
     await message.answer(
         "🏠 Главное меню",
         reply_markup=main_menu(message.from_user.id)
+    )
+
+@dp.pre_checkout_query()
+async def pre_checkout(pre_checkout_query: PreCheckoutQuery):
+    await pre_checkout_query.answer(ok=True)
+
+@dp.message(F.successful_payment)
+async def successful_payment(message: Message):
+
+    await message.answer(
+        "⭐ Оплата прошла успешно!\n\nСпасибо за оплату!"
     )
 
 async def main():
